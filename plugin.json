@@ -1,10 +1,17 @@
 {
-  "name": "Example Plugin",
-  "author": "John Doe",
-  "flags": ["debug", "_root"],
+  "name": "DeckMenuHotkey",
+  "author": "Eugene Lykov",
+  "version": "0.0.1",
+  "flags": [
+    "debug",
+    "_root"
+  ],
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Decky example plugin.",
+    "tags": [
+      "template",
+      "root"
+    ],
+    "description": "Decky plugin to add global Steam Menu Hotkey.",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
   }
 }

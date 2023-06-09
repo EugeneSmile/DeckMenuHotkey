@@ -1,0 +1,6 @@
+[submodule "backend/deps/json"]
+	path = backend/deps/json
+	url = https://github.com/nlohmann/json.git
+[submodule "backend/deps/kore"]
+	path = backend/deps/kore
+	url = https://github.com/jorisvink/kore.git

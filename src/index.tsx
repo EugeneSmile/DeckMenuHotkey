@@ -1,27 +1,24 @@
 import {
-  ButtonItem,
   definePlugin,
-  DialogButton,
-  Menu,
-  MenuItem,
+  Dropdown,
+  DropdownOption,
+  SingleDropdownOption,
   PanelSection,
   PanelSectionRow,
-  Router,
   ServerAPI,
-  showContextMenu,
   staticClasses,
+  TextField,
 } from "decky-frontend-lib";
-import { VFC } from "react";
+import { VFC, useState } from "react";
 import { FaShip } from "react-icons/fa";
-
-import logo from "../assets/logo.png";
+import * as backend from "./backend";
 
 // interface AddMethodArgs {
 //   left: number;
 //   right: number;
 // }
 
-const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
+const Content: VFC<{ serverAPI: ServerAPI }> = ({ }) => {
   // const [result, setResult] = useState<number | undefined>();
 
   // const onClick = async () => {
@@ -37,69 +34,30 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({}) => {
   //   }
   // };
 
+  const [dropdownOptions, setDropdownOptions] = useState<DropdownOption[]>([]);
+  const [selectedApp, setSelectedApp] = useState<number | null>(null);
+
   return (
     <PanelSection title="Panel Section">
       <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={(e) =>
-            showContextMenu(
-              <Menu label="Menu" cancelText="CAAAANCEL" onCancel={() => {}}>
-                <MenuItem onSelected={() => {}}>Item #1</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #2</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #3</MenuItem>
-              </Menu>,
-              e.currentTarget ?? window
-            )
-          }
-        >
-          Server says yolo
-        </ButtonItem>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <img src={logo} />
-        </div>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => {
-            Router.CloseSideMenus();
-            Router.Navigate("/decky-plugin-test");
+        <TextField value="Hello!" />
+        <Dropdown
+          strDefaultLabel="Select Keyboard Input"
+          rgOptions={dropdownOptions}
+          selectedOption={selectedApp}
+          onChange={(e: SingleDropdownOption) => {
           }}
-        >
-          Router
-        </ButtonItem>
+        />
       </PanelSectionRow>
     </PanelSection>
   );
 };
 
-const DeckyPluginRouterTest: VFC = () => {
-  return (
-    <div style={{ marginTop: "50px", color: "white" }}>
-      Hello World!
-      <DialogButton onClick={() => Router.NavigateToLibraryTab()}>
-        Go to Library
-      </DialogButton>
-    </div>
-  );
-};
-
 export default definePlugin((serverApi: ServerAPI) => {
-  serverApi.routerHook.addRoute("/decky-plugin-test", DeckyPluginRouterTest, {
-    exact: true,
-  });
-
   return {
-    title: <div className={staticClasses.Title}>Example Plugin</div>,
+    title: <div className={staticClasses.Title}>DeckMenuHotkey Plugin</div>,
     content: <Content serverAPI={serverApi} />,
     icon: <FaShip />,
-    onDismount() {
-      serverApi.routerHook.removeRoute("/decky-plugin-test");
-    },
+    onDismount() { },
   };
 });
