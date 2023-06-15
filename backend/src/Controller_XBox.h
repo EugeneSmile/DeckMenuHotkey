@@ -9,6 +9,8 @@ private:
 public:
     Controller_XBox();
     ~Controller_XBox();
+    void sendSteam();
+    void sendQuickmenu();
 };
 
 #endif

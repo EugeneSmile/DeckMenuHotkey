@@ -8,11 +8,13 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/out)
 
 file(GLOB_RECURSE srcs src/*.cc src/*.h)
 
-add_subdirectory(deps/cpprestsdk)
+set(CROW_BUILD_EXAMPLES OFF)
+set(CROW_BUILD_TESTS OFF)
+add_subdirectory(deps/CrowCpp)
 
 add_executable(deckmenuhotkey ${srcs})
-add_dependencies(deckmenuhotkey cpprest)
-target_link_libraries(deckmenuhotkey PRIVATE cpprest)
+add_dependencies(deckmenuhotkey Crow::Crow)
+target_link_libraries(deckmenuhotkey Crow::Crow)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

@@ -56,4 +56,5 @@ cli/
 cli/*
 cli/decky
 
+build
 backend/build

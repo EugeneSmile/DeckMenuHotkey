@@ -7,11 +7,12 @@
 
 #include <linux/uinput.h>
 
-class Controller
+#include "InputDevice.h"
+
+class Controller : public InputDevice
 {
 private:
 protected:
-    int fd;
     std::vector<int> keys{-1};
     uinput_user_dev udev;
 
@@ -20,7 +21,6 @@ protected:
 public:
     Controller(uint16_t vid, uint16_t pid, uint16_t version, const std::string &name);
     ~Controller();
-    void emit(int type, int code, int val);
 };
 
 #endif
