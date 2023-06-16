@@ -1,7 +1,7 @@
 #ifndef TYPES_H_GUARD
 #define TYPES_H_GUARD
 
-enum SteamHotKeys
+enum SteamHotkeys
 {
     STEAM = 0,
     QUICKMENU = 1,

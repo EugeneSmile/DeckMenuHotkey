@@ -14,7 +14,7 @@
 class Keyboard : public InputDevice
 {
 private:
-    std::vector<Hotkey> hotkeys{SteamHotKeys::NUMBER_OF_STEAM_HOTKEYS};
+    std::vector<Hotkey> hotkeys{SteamHotkeys::NUMBER_OF_STEAM_HOTKEYS};
     int event_number;
     int error_number;
     bool is_open{false};
@@ -28,13 +28,16 @@ public:
     Keyboard(int event_number = -1);
     ~Keyboard();
 
+    void init();
     bool openDevice();
     void closeDevice();
     std::optional<input_event> readEvent();
     void setFlags(input_event &ev);
-    void setHotkey(const SteamHotKeys hotkey_type, const bool meta, const bool alt, const bool ctrl, const bool shift, const unsigned short ev_key);
-    bool testModifiers(const SteamHotKeys hotkey_type);
-    bool isHotkeyPressed(const SteamHotKeys hotkey_type);
+    void setHotkey(const SteamHotkeys hotkey_type, const bool meta, const bool alt, const bool ctrl, const bool shift, const unsigned short ev_key);
+    void setDefaultHotkeys();
+    bool testModifiers(const SteamHotkeys hotkey_type);
+    bool isHotkeyPressed(const SteamHotkeys hotkey_type);
+    Hotkey getHotkeys(const SteamHotkeys hotkey_type);
 };
 
 class Keyboards
@@ -49,8 +52,10 @@ public:
     Keyboards(/* args */);
     ~Keyboards();
     std::vector<std::string> &getKeyboards();
+    std::vector<std::string> &getActiveKeyboards();
     Keyboard &getKeyboard(const std::string &name);
-    bool process(const SteamHotKeys hotkey_type);
+    bool process(const SteamHotkeys hotkey_type);
+    bool setKeyboardActive(const std::string &name, bool active = true);
 };
 
 #endif

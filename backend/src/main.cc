@@ -1,24 +1,12 @@
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <linux/input.h>
-#include <string.h>
-#include <stdio.h>
-#include <linux/input-event-codes.h>
-#include <stdbool.h>
 #include <signal.h>
 #include <iostream>
 #include <thread>
 #include <chrono>
 
 #include "Manager.h"
-#include "WebInterface.h"
 
 bool run = true;
 Manager manager;
-// WebInterface interface;
 
 static void signal_handler(int signal)
 {
@@ -28,7 +16,7 @@ static void signal_handler(int signal)
 
 int main(void)
 {
-   signal(SIGINT, signal_handler);
+   signal(SIGQUIT, signal_handler);
 
    int error = 0;
    while (run)

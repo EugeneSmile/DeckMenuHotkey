@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <algorithm>
 
 Keyboard::Keyboard(int event_number) : event_number(event_number)
 {
@@ -14,6 +15,12 @@ Keyboard::Keyboard(int event_number) : event_number(event_number)
 Keyboard::~Keyboard()
 {
     closeDevice();
+}
+
+void Keyboard::init()
+{
+    setDefaultHotkeys();
+    openDevice();
 }
 
 bool Keyboard::openDevice()
@@ -119,7 +126,7 @@ void Keyboard::setFlags(input_event &ev)
     }
 }
 
-void Keyboard::setHotkey(const SteamHotKeys hotkey_type, const bool meta, const bool alt, const bool ctrl, const bool shift, const unsigned short ev_key)
+void Keyboard::setHotkey(const SteamHotkeys hotkey_type, const bool meta, const bool alt, const bool ctrl, const bool shift, const unsigned short ev_key)
 {
     hotkeys.at(hotkey_type).modifiers.meta = meta;
     hotkeys.at(hotkey_type).modifiers.alt = alt;
@@ -128,12 +135,18 @@ void Keyboard::setHotkey(const SteamHotKeys hotkey_type, const bool meta, const 
     hotkeys.at(hotkey_type).key = ev_key;
 }
 
-bool Keyboard::testModifiers(const SteamHotKeys hotkey_type)
+void Keyboard::setDefaultHotkeys()
+{
+    setHotkey(SteamHotkeys::STEAM, true, false, false, false, KEY_HOMEPAGE);
+    setHotkey(SteamHotkeys::QUICKMENU, true, false, false, false, KEY_TAB);
+}
+
+bool Keyboard::testModifiers(const SteamHotkeys hotkey_type)
 {
     return (hotkeys.at(hotkey_type).modifiers.meta == modifiers.left.meta || hotkeys.at(hotkey_type).modifiers.meta == modifiers.right.meta) && (hotkeys.at(hotkey_type).modifiers.alt == modifiers.left.alt || hotkeys.at(hotkey_type).modifiers.alt == modifiers.right.alt) && (hotkeys.at(hotkey_type).modifiers.ctrl == modifiers.left.ctrl || hotkeys.at(hotkey_type).modifiers.ctrl == modifiers.right.ctrl) && (hotkeys.at(hotkey_type).modifiers.shift == modifiers.left.shift || hotkeys.at(hotkey_type).modifiers.shift == modifiers.right.shift);
 }
 
-bool Keyboard::isHotkeyPressed(const SteamHotKeys hotkey_type)
+bool Keyboard::isHotkeyPressed(const SteamHotkeys hotkey_type)
 {
     auto ev = readEvent();
     if (ev.has_value())
@@ -141,6 +154,11 @@ bool Keyboard::isHotkeyPressed(const SteamHotKeys hotkey_type)
         return (ev.value().type == EV_KEY && testModifiers(hotkey_type) && ev.value().value == 0 && ev.value().code == hotkeys.at(hotkey_type).key);
     }
     return false;
+}
+
+Hotkey Keyboard::getHotkeys(const SteamHotkeys hotkey_type)
+{
+    return hotkeys.at(hotkey_type);
 }
 
 Keyboards::Keyboards(/* args */)
@@ -152,9 +170,7 @@ Keyboards::Keyboards(/* args */)
     if (keyboards.find(default_keyboard_name) != keyboards.end())
     {
         active_keyboards.push_back(default_keyboard_name);
-        keyboards.at(default_keyboard_name).setHotkey(SteamHotKeys::STEAM, true, false, false, false, KEY_HOMEPAGE);
-        keyboards.at(default_keyboard_name).setHotkey(SteamHotKeys::QUICKMENU, true, false, false, false, KEY_TAB);
-        keyboards.at(default_keyboard_name).openDevice();
+        keyboards.at(default_keyboard_name).init();
     }
 }
 
@@ -167,12 +183,17 @@ std::vector<std::string> &Keyboards::getKeyboards()
     return reader.getKeyboards();
 }
 
+std::vector<std::string> &Keyboards::getActiveKeyboards()
+{
+    return active_keyboards;
+}
+
 Keyboard &Keyboards::getKeyboard(const std::string &name)
 {
     return keyboards[name];
 }
 
-bool Keyboards::process(const SteamHotKeys hotkey_type)
+bool Keyboards::process(const SteamHotkeys hotkey_type)
 {
     bool return_value = false;
     for (const auto &keyboard : active_keyboards)
@@ -180,4 +201,31 @@ bool Keyboards::process(const SteamHotKeys hotkey_type)
         return_value |= keyboards.at(keyboard).isHotkeyPressed(hotkey_type);
     }
     return return_value;
+}
+
+bool Keyboards::setKeyboardActive(const std::string &name, bool active)
+{
+    if (keyboards.find(name) != keyboards.end())
+    {
+        auto kbd_it = std::find(active_keyboards.begin(), active_keyboards.end(), name);
+        if (kbd_it != active_keyboards.end())
+        {
+            if (!active)
+            {
+                keyboards[name].closeDevice();
+                active_keyboards.erase(kbd_it);
+            }
+            return true;
+        }
+        else
+        {
+            if (active)
+            {
+                keyboards[name].init();
+                active_keyboards.push_back(name);
+            }
+            return true;
+        }
+    }
+    return false;
 }
