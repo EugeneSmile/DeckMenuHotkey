@@ -28,6 +28,8 @@ Interface::Interface(std::shared_ptr<Keyboards> keyboards) : keyboards(keyboards
         (std::bind(&Interface::getKeyboardHotkeys, this, std::placeholders::_1));
         CROW_ROUTE(app, "/setKeyboardHotkey")
         (std::bind(&Interface::setKeyboardHotkey, this, std::placeholders::_1));
+        CROW_ROUTE(app, "/logRequest")
+        (std::bind(&Interface::logRequest, this, std::placeholders::_1));
     }
 
     app_future = app.bindaddr("127.0.0.1")
@@ -93,6 +95,24 @@ crow::response Interface::setKeyboardHotkey(const crow::request &request)
     if (!fixed_name.empty())
     {
         keyboards->getKeyboard(fixed_name).setHotkey(static_cast<SteamHotkeys>(crow::utility::lexical_cast<int>("type")), crow::utility::lexical_cast<bool>(request.url_params.get("meta")), crow::utility::lexical_cast<bool>(request.url_params.get("alt")), crow::utility::lexical_cast<bool>(request.url_params.get("ctrl")), crow::utility::lexical_cast<bool>(request.url_params.get("shift")), crow::utility::lexical_cast<unsigned short>(request.url_params.get("key")));
+    }
+    crow::response res;
+    res.write("OK");
+    return res;
+}
+
+crow::response Interface::logRequest(const crow::request &request)
+{
+    for (auto &key : request.url_params.keys())
+    {
+        if (key == "info")
+            CROW_LOG_INFO << fixString(request.url_params.get("info"));
+        if (key == "warning")
+            CROW_LOG_WARNING << fixString(request.url_params.get("warning"));
+        if (key == "error")
+            CROW_LOG_ERROR << fixString(request.url_params.get("error"));
+        if (key == "debug")
+            CROW_LOG_DEBUG << fixString(request.url_params.get("debug"));
     }
     crow::response res;
     res.write("OK");

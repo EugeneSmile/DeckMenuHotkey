@@ -1,15 +1,12 @@
 import {
   definePlugin,
-  Dropdown,
-  DropdownOption,
-  SingleDropdownOption,
   PanelSection,
   PanelSectionRow,
   ServerAPI,
   staticClasses,
-  TextField,
+  ButtonItem
 } from "decky-frontend-lib";
-import { VFC, useState } from "react";
+import { VFC, useState, useEffect } from "react";
 import { FaShip } from "react-icons/fa";
 import * as backend from "./backend";
 
@@ -17,6 +14,12 @@ import * as backend from "./backend";
 //   left: number;
 //   right: number;
 // }
+
+async function delayPromise<T>(value: T): Promise<T> {
+  return new Promise<T>(resolve => {
+    setTimeout(() => resolve(value), 275);
+  });
+}
 
 const Content: VFC<{ serverAPI: ServerAPI }> = ({ }) => {
   // const [result, setResult] = useState<number | undefined>();
@@ -34,22 +37,37 @@ const Content: VFC<{ serverAPI: ServerAPI }> = ({ }) => {
   //   }
   // };
 
-  const [dropdownOptions, setDropdownOptions] = useState<DropdownOption[]>([]);
-  const [selectedApp, setSelectedApp] = useState<number | null>(null);
+  const [keyboards, setKeyboards] = useState<string[]>([]);
+  const [buttonText, setButtonText] = useState("Reload");
+
+  useEffect(() => {
+    backend.getKeyboards()
+      .then((keyboards) => { setKeyboards(keyboards); backend.logRequest("info", keyboards.length.toString()) });
+  }, []);
+
+  const refreshButton = (
+    <PanelSectionRow>
+      <ButtonItem
+        layout="below"
+        onClick={async () => {
+          backend.logRequest("info", `Keyboards: ` + keyboards.length.toString());
+          //setKeyboards(await delayPromise(backend.getKeyboards()));
+        }}
+      >
+        {buttonText}
+      </ButtonItem>
+    </PanelSectionRow >
+  );
 
   return (
-    <PanelSection title="Panel Section">
-      <PanelSectionRow>
-        <TextField value="Hello!" />
-        <Dropdown
-          strDefaultLabel="Select Keyboard Input"
-          rgOptions={dropdownOptions}
-          selectedOption={selectedApp}
-          onChange={(e: SingleDropdownOption) => {
-          }}
-        />
-      </PanelSectionRow>
-    </PanelSection>
+    <PanelSection title="Keyboards">
+      {keyboards.map((keyboard) => (
+        <PanelSectionRow key={keyboard}>
+          {keyboard}
+        </PanelSectionRow>
+      ))}
+      {refreshButton}
+    </PanelSection >
   );
 };
 

@@ -21,6 +21,7 @@ private:
     crow::response setKeyboardActive(const crow::request &request);
     crow::json::wvalue getKeyboardHotkeys(const crow::request &request);
     crow::response setKeyboardHotkey(const crow::request &request);
+    crow::response logRequest(const crow::request &request);
 
 public:
     Interface(std::shared_ptr<Keyboards> keyboards = nullptr);
