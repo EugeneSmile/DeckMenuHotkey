@@ -15,7 +15,12 @@
             // "windows": {
             //     "command": "call -c ${workspaceFolder}\\.vscode\\setup.bat",
             // },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //pnpm setup task to grab all needed modules
         {
@@ -24,7 +29,12 @@
             "group": "none",
             "detail": "Setup pnpm",
             "command": "which pnpm && pnpm i",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //Preliminary "All-in-one" setup task
         {
@@ -36,7 +46,12 @@
                 "pnpmsetup",
                 "updatefrontendlib"
             ],
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //Preliminary Deploy Config Setup
         {
@@ -51,7 +66,12 @@
             // "windows": {
             //     "command": "call ${workspaceFolder}\\.vscode\\config.bat",
             // },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //BUILD TASKS
         {
@@ -65,7 +85,12 @@
             // "windows": {
             //     "command": "call ${workspaceFolder}\\.vscode\\build.bat",
             // },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //"All-in-one" build task
         {
@@ -78,7 +103,12 @@
                 "settingscheck",
                 "cli-build",
             ],
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //DEPLOY TASKS
         //Copies the zip file of the built plugin to the plugins folder
@@ -91,7 +121,12 @@
                 "chmodplugins"
             ],
             "command": "rsync -azp --chmod=D0755,F0755 --rsh='ssh -p ${config:deckport} ${config:deckkey}' out/ ${config:deckuser}@${config:deckip}:${config:deckdir}/homebrew/plugins",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //
         {
@@ -100,7 +135,12 @@
             "type": "shell",
             "group": "none",
             "command": "echo '${config:deckdir}/homebrew/plugins/${config:pluginname}.zip' && ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S mkdir 755 -p \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|\")\" && echo ${config:deckpass} | sudo -S chown ${config:deckuser}:${config:deckuser} \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|\")\" && echo ${config:deckpass} | sudo -S bsdtar -xzpf \"${config:deckdir}/homebrew/plugins/${config:pluginname}.zip\" -C \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|\")\" --strip-components=1 --fflags '",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //"All-in-one" deploy task
         {
@@ -111,7 +151,12 @@
                 "copyzip",
                 "extractzip"
             ],
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //"All-in-on" build & deploy task
         {
@@ -123,7 +168,12 @@
                 "build",
                 "deploy"
             ],
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //GENERAL TASKS
         //Update Decky Frontend Library, aka DFL
@@ -133,7 +183,12 @@
             "group": "build",
             "detail": "Update deck-frontend-lib aka DFL",
             "command": "pnpm update decky-frontend-lib --latest",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         //Used chmod plugins folder to allow copy-over of files
         {
@@ -142,7 +197,12 @@
             "type": "shell",
             "group": "none",
             "command": "ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo '${config:deckpass}' | sudo -S chmod -R ug+rw ${config:deckdir}/homebrew/plugins/'",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
         },
         {
             "label": "buildbackend",
@@ -151,6 +211,25 @@
             "detail": "Build backend",
             "command": "cd backend && make",
             "problemMatcher": [],
+            "options": {
+                "statusbar": {
+                    "hide": true
+                }
+            }
+        },
+        {
+            "label": "Install to tsh3",
+            "type": "shell",
+            "group": "none",
+            "detail": "Install frontend to tsh3",
+            "linux": {
+                "command": "${workspaceFolder}/.vscode/install_to_tsh3.sh",
+            },
+            // // placeholder for windows scripts, not currently planned
+            // "windows": {
+            //     "command": "call -c ${workspaceFolder}\\.vscode\\setup.bat",
+            // },
+            "problemMatcher": []
         },
     ]
 }

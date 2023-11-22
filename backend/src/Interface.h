@@ -7,25 +7,28 @@
 #include <future>
 
 #include "crow.h"
+#include "crow/middlewares/cors.h"
 
-class Keyboards;
-class Interface
+#include "Parent.h"
+
+class Interface : public Parent
 {
 private:
-    crow::SimpleApp app;
+    crow::App<crow::CORSHandler> app;
     std::future<void> app_future;
-    std::shared_ptr<Keyboards> keyboards;
     const std::string fixString(const std::string &str);
     crow::json::wvalue getKeyboards();
-    crow::json::wvalue getActiveKeyboards();
-    crow::response setKeyboardActive(const crow::request &request);
-    crow::json::wvalue getKeyboardHotkeys(const crow::request &request);
-    crow::response setKeyboardHotkey(const crow::request &request);
+    crow::response setKeyboards(const crow::request &request);
     crow::response logRequest(const crow::request &request);
+    crow::json::wvalue getEnabled();
+    crow::response setEnabled(const crow::request &request);
+    crow::response printConfig();
+    crow::response stopBackend();
+    crow::response reloadKeyboards();
 
 public:
-    Interface(std::shared_ptr<Keyboards> keyboards = nullptr);
-    ~Interface();
+    Interface();
+    void stop();
 };
 
 #endif

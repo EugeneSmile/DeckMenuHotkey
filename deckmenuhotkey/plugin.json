@@ -1,17 +1,17 @@
 {
   "name": "DeckMenuHotkey",
   "author": "Eugene Lykov",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "flags": [
     "debug",
-    "root"
+    "_root"
   ],
   "publish": {
     "tags": [
       "template",
       "root"
     ],
-    "description": "Decky plugin to let call Home and Quick Access menus from keyboard in fullscreen applications",
+    "description": "Decky plugin to add global Steam Menu Hotkey.",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
   }
 }

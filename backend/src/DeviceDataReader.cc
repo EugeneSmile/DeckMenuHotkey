@@ -6,14 +6,6 @@
 
 #include "StringHelper.h"
 
-DeviceData::DeviceData(/* args */)
-{
-}
-
-DeviceData::~DeviceData()
-{
-}
-
 void DeviceData::fillData(const std::string &line)
 {
     if (!line.empty())
@@ -118,8 +110,10 @@ bool DeviceData::isMouse()
     return is_mouse;
 }
 
-DeviceDataReader::DeviceDataReader(/* args */)
+void DeviceDataReader::reloadDevices()
 {
+    devices.clear();
+    device_names.clear();
     std::ifstream fs = std::ifstream(devices_path.c_str(), std::ios::in);
     if (fs.is_open())
     {
@@ -135,15 +129,12 @@ DeviceDataReader::DeviceDataReader(/* args */)
             {
                 devices.emplace(data.getName(), data);
                 if (data.isKeyboard())
-                    keyboard_names.push_back(data.getName());
+                    device_names.push_back(data.getName());
                 data = DeviceData();
             }
         }
     }
-}
-
-DeviceDataReader::~DeviceDataReader()
-{
+    fs.close();
 }
 
 int DeviceDataReader::getEventNumber(const std::string &device_name)
@@ -151,7 +142,7 @@ int DeviceDataReader::getEventNumber(const std::string &device_name)
     return devices[device_name].getEventNumber();
 }
 
-std::vector<std::string> &DeviceDataReader::getKeyboards()
+std::vector<std::string> &DeviceDataReader::getDeviceNames()
 {
-    return keyboard_names;
+    return device_names;
 }

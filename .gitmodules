@@ -1,6 +1,6 @@
-[submodule "backend/deps/json"]
-	path = backend/deps/json
-	url = https://github.com/nlohmann/json.git
 [submodule "backend/deps/CrowCpp"]
 	path = backend/deps/CrowCpp
 	url = https://github.com/CrowCpp/Crow.git
+[submodule "backend/deps/toml11"]
+	path = backend/deps/toml11
+	url = https://github.com/ToruNiina/toml11

@@ -32,3 +32,10 @@ std::optional<std::pair<std::string, std::string>> getPair(const std::string &pa
         return {};
     }
 }
+
+bool convertToBool(const std::string &str)
+{
+    if (str == "false" || str == "False" || str == "No" || str == "no" || str == "0")
+        return false;
+    return true;
+}

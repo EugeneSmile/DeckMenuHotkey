@@ -8,7 +8,6 @@ class Controller_Steam : public Controller
 private:
 public:
     Controller_Steam();
-    ~Controller_Steam();
 };
 
 #endif

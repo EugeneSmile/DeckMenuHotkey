@@ -8,6 +8,9 @@
 #include <iostream>
 #include <algorithm>
 
+#include "Manager.h"
+#include "Preferences.h"
+
 Keyboard::Keyboard(int event_number) : event_number(event_number)
 {
 }
@@ -17,30 +20,37 @@ Keyboard::~Keyboard()
     closeDevice();
 }
 
-void Keyboard::init()
+bool Keyboard::isEnabled()
 {
-    setDefaultHotkeys();
-    openDevice();
+    return is_open;
 }
 
-bool Keyboard::openDevice()
+void Keyboard::setEnabled(bool enabled)
+{
+    if (is_open && !enabled)
+        closeDevice();
+    else if (!is_open && enabled)
+        openDevice();
+}
+
+void Keyboard::openDevice()
 {
     std::string event_path = "/dev/input/event" + std::to_string(event_number);
     fd = open(event_path.c_str(), O_RDONLY | O_NONBLOCK);
     if (fd == -1)
     {
         error_number = errno;
-        fprintf(stderr, "Cannot open %s: %s.\n", event_path, strerror(errno));
-        return false;
+        fprintf(stderr, "[deckmenuhotkey] Cannot open %s: %s.\n", event_path, strerror(errno));
+        return;
     }
     is_open = true;
-    return true;
 }
 
 void Keyboard::closeDevice()
 {
     if (is_open)
         close(fd);
+    is_open = false;
 }
 
 std::optional<input_event> Keyboard::readEvent()
@@ -59,7 +69,7 @@ std::optional<input_event> Keyboard::readEvent()
             }
             if (errno != EINTR)
             {
-                fprintf(stderr, "Err %d\n", errno);
+                fprintf(stderr, "[deckmenuhotkey] readEvent Err %d\n", errno);
                 return {};
             }
         }
@@ -86,146 +96,162 @@ void Keyboard::setFlags(input_event &ev)
     // Released
     if (ev.value == 0)
     {
-        if (ev.code == KEY_LEFTMETA)
-            modifiers.left.meta = false;
         if (ev.code == KEY_LEFTALT)
             modifiers.left.alt = false;
         if (ev.code == KEY_LEFTCTRL)
             modifiers.left.ctrl = false;
         if (ev.code == KEY_LEFTSHIFT)
             modifiers.left.shift = false;
-        if (ev.code == KEY_RIGHTMETA)
-            modifiers.right.meta = false;
+        if (ev.code == KEY_LEFTMETA)
+            modifiers.left.meta = false;
         if (ev.code == KEY_RIGHTALT)
             modifiers.right.alt = false;
         if (ev.code == KEY_RIGHTCTRL)
             modifiers.right.ctrl = false;
         if (ev.code == KEY_RIGHTSHIFT)
             modifiers.right.shift = false;
+        if (ev.code == KEY_RIGHTMETA)
+            modifiers.right.meta = false;
     }
 
     // Pressed
-    if (ev.value == 1)
+    if (ev.value == 1 || ev.value == 2)
     {
-        if (ev.code == KEY_LEFTMETA)
-            modifiers.left.meta = true;
         if (ev.code == KEY_LEFTALT)
             modifiers.left.alt = true;
         if (ev.code == KEY_LEFTCTRL)
             modifiers.left.ctrl = true;
         if (ev.code == KEY_LEFTSHIFT)
             modifiers.left.shift = true;
-        if (ev.code == KEY_RIGHTMETA)
-            modifiers.right.meta = true;
+        if (ev.code == KEY_LEFTMETA)
+            modifiers.left.meta = true;
         if (ev.code == KEY_RIGHTALT)
             modifiers.right.alt = true;
         if (ev.code == KEY_RIGHTCTRL)
             modifiers.right.ctrl = true;
         if (ev.code == KEY_RIGHTSHIFT)
             modifiers.right.shift = true;
+        if (ev.code == KEY_RIGHTMETA)
+            modifiers.right.meta = true;
     }
 }
 
-void Keyboard::setHotkey(const SteamHotkeys hotkey_type, const bool meta, const bool alt, const bool ctrl, const bool shift, const unsigned short ev_key)
+void Keyboard::setHotkeys(const HotkeyGroupsEnum hotkey_type, const bool alt, const bool ctrl, const bool shift, const bool meta, const unsigned short ev_key)
 {
-    hotkeys.at(hotkey_type).modifiers.meta = meta;
     hotkeys.at(hotkey_type).modifiers.alt = alt;
     hotkeys.at(hotkey_type).modifiers.ctrl = ctrl;
     hotkeys.at(hotkey_type).modifiers.shift = shift;
+    hotkeys.at(hotkey_type).modifiers.meta = meta;
     hotkeys.at(hotkey_type).key = ev_key;
 }
 
-void Keyboard::setDefaultHotkeys()
+void Keyboard::setHotkeys(const HotkeyGroupsEnum hotkey_type, const HotkeyGroup &hotkey)
 {
-    setHotkey(SteamHotkeys::STEAM, true, false, false, false, KEY_HOMEPAGE);
-    setHotkey(SteamHotkeys::QUICKMENU, true, false, false, false, KEY_TAB);
+    hotkeys.at(hotkey_type) = hotkey;
 }
 
-bool Keyboard::testModifiers(const SteamHotkeys hotkey_type)
+bool Keyboard::testModifiers(const HotkeyGroupsEnum hotkey_type)
 {
-    return (hotkeys.at(hotkey_type).modifiers.meta == modifiers.left.meta || hotkeys.at(hotkey_type).modifiers.meta == modifiers.right.meta) && (hotkeys.at(hotkey_type).modifiers.alt == modifiers.left.alt || hotkeys.at(hotkey_type).modifiers.alt == modifiers.right.alt) && (hotkeys.at(hotkey_type).modifiers.ctrl == modifiers.left.ctrl || hotkeys.at(hotkey_type).modifiers.ctrl == modifiers.right.ctrl) && (hotkeys.at(hotkey_type).modifiers.shift == modifiers.left.shift || hotkeys.at(hotkey_type).modifiers.shift == modifiers.right.shift);
+    return ((hotkeys.at(hotkey_type).modifiers.alt == (modifiers.left.alt || modifiers.right.alt)) && (hotkeys.at(hotkey_type).modifiers.ctrl == (modifiers.left.ctrl || modifiers.right.ctrl)) && (hotkeys.at(hotkey_type).modifiers.shift == (modifiers.left.shift || modifiers.right.shift)) && (hotkeys.at(hotkey_type).modifiers.meta == (modifiers.left.meta || modifiers.right.meta)));
 }
 
-bool Keyboard::isHotkeyPressed(const SteamHotkeys hotkey_type)
+std::optional<HotkeyGroupsEnum> Keyboard::testHotkey()
 {
     auto ev = readEvent();
-    if (ev.has_value())
-    {
-        return (ev.value().type == EV_KEY && testModifiers(hotkey_type) && ev.value().value == 0 && ev.value().code == hotkeys.at(hotkey_type).key);
-    }
-    return false;
+    if (ev.has_value() && ev.value().type == EV_KEY && ev.value().value == 0)
+        for (size_t i = 0; i < HotkeyGroupsEnum::NUMBER_OF_HOTKEYS; i++)
+            if (testModifiers(static_cast<HotkeyGroupsEnum>(i)) && ev.value().code == hotkeys.at(static_cast<HotkeyGroupsEnum>(i)).key)
+                return static_cast<HotkeyGroupsEnum>(i);
+    return {};
 }
 
-Hotkey Keyboard::getHotkeys(const SteamHotkeys hotkey_type)
+HotkeyGroup Keyboard::getHotkeys(const HotkeyGroupsEnum hotkey_type)
 {
     return hotkeys.at(hotkey_type);
 }
 
-Keyboards::Keyboards(/* args */)
+Keyboards::Keyboards()
 {
-    for (const auto &keyboard : reader.getKeyboards())
+    reloadKeyboards();
+}
+
+void Keyboards::stop()
+{
+    for (auto &keyboard : keyboards)
+        saveKeyboard(keyboard.first, keyboard.second);
+}
+
+void Keyboards::saveKeyboard(const std::string &name, Keyboard &keyboard)
+{
+    parent->preferences->saveKeyboard(name, isKeyboardEnabled(name), {{HotkeyGroupsEnum::STEAM, keyboard.getHotkeys(HotkeyGroupsEnum::STEAM)}, {HotkeyGroupsEnum::QUICKMENU, keyboard.getHotkeys(HotkeyGroupsEnum::QUICKMENU)}});
+}
+
+void Keyboards::reloadKeyboards()
+{
+    reader.reloadDevices();
+    keyboards.clear();
+    for (const auto &device : reader.getDeviceNames())
     {
-        keyboards.emplace(keyboard, Keyboard(reader.getEventNumber(keyboard)));
-    }
-    if (keyboards.find(default_keyboard_name) != keyboards.end())
-    {
-        active_keyboards.push_back(default_keyboard_name);
-        keyboards.at(default_keyboard_name).init();
-    }
-}
-
-Keyboards::~Keyboards()
-{
-}
-
-std::vector<std::string> &Keyboards::getKeyboards()
-{
-    return reader.getKeyboards();
-}
-
-std::vector<std::string> &Keyboards::getActiveKeyboards()
-{
-    return active_keyboards;
-}
-
-Keyboard &Keyboards::getKeyboard(const std::string &name)
-{
-    return keyboards[name];
-}
-
-bool Keyboards::process(const SteamHotkeys hotkey_type)
-{
-    bool return_value = false;
-    for (const auto &keyboard : active_keyboards)
-    {
-        return_value |= keyboards.at(keyboard).isHotkeyPressed(hotkey_type);
-    }
-    return return_value;
-}
-
-bool Keyboards::setKeyboardActive(const std::string &name, bool active)
-{
-    if (keyboards.find(name) != keyboards.end())
-    {
-        auto kbd_it = std::find(active_keyboards.begin(), active_keyboards.end(), name);
-        if (kbd_it != active_keyboards.end())
+        if (std::find(excluded_inputs.begin(), excluded_inputs.end(), device) == excluded_inputs.end())
         {
-            if (!active)
+            keyboards.emplace(device, Keyboard(reader.getEventNumber(device)));
+            if (parent->preferences->haveKeyboard(device))
             {
-                keyboards[name].closeDevice();
-                active_keyboards.erase(kbd_it);
+                keyboards.at(device).setHotkeys(HotkeyGroupsEnum::STEAM, parent->preferences->getHotkey(device, HotkeyGroupsEnum::STEAM));
+                keyboards.at(device).setHotkeys(HotkeyGroupsEnum::QUICKMENU, parent->preferences->getHotkey(device, HotkeyGroupsEnum::QUICKMENU));
+                setKeyboardEnabled(device, parent->preferences->isKeyboardEnabled(device));
             }
-            return true;
-        }
-        else
-        {
-            if (active)
-            {
-                keyboards[name].init();
-                active_keyboards.push_back(name);
-            }
-            return true;
         }
     }
-    return false;
+}
+
+std::vector<std::string> Keyboards::getKeyboardNames()
+{
+    std::vector<std::string> keyboard_names;
+    for (const auto &keyboard : keyboards)
+        keyboard_names.push_back(keyboard.first);
+    return keyboard_names;
+}
+
+void Keyboards::process()
+{
+    for (auto &keyboard : keyboards)
+    {
+        if (keyboard.second.isEnabled())
+        {
+            std::optional<HotkeyGroupsEnum> hotkey = keyboard.second.testHotkey();
+            if (hotkey.has_value())
+                parent->bindings[hotkey.value()]();
+        }
+    }
+}
+
+void Keyboards::setKeyboardEnabled(const std::string &name, bool enabled)
+{
+    if (keyboards.contains(name))
+    {
+        keyboards[name].setEnabled(enabled);
+        saveKeyboard(name, keyboards[name]);
+    }
+}
+
+bool Keyboards::isKeyboardEnabled(const std::string &name)
+{
+    return (keyboards.contains(name) ? keyboards[name].isEnabled() : false);
+}
+
+void Keyboards::setKeyboardHotkeys(const std::string &name, const HotkeyGroupsEnum hotkey_type, const bool alt, const bool ctrl, const bool shift, const bool meta, const unsigned short ev_key)
+{
+    if (keyboards.contains(name))
+    {
+        keyboards[name].setHotkeys(hotkey_type, alt, ctrl, shift, meta, ev_key);
+        saveKeyboard(name, keyboards[name]);
+    }
+}
+
+HotkeyGroup Keyboards::getKeyboardHotkeys(const std::string &name, const HotkeyGroupsEnum hotkey_type)
+{
+    if (keyboards.contains(name))
+        return keyboards[name].getHotkeys(hotkey_type);
+    return {};
 }

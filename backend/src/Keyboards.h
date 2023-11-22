@@ -5,16 +5,20 @@
 #include <unordered_map>
 #include <vector>
 #include <optional>
+#include <memory>
+#include <functional>
 #include <linux/input.h>
 
+#include "Parent.h"
 #include "Types.h"
 #include "InputDevice.h"
 #include "DeviceDataReader.h"
 
+class Preferences;
 class Keyboard : public InputDevice
 {
 private:
-    std::vector<Hotkey> hotkeys{SteamHotkeys::NUMBER_OF_STEAM_HOTKEYS};
+    std::vector<HotkeyGroup> hotkeys{HotkeyGroupsEnum::NUMBER_OF_HOTKEYS};
     int event_number;
     int error_number;
     bool is_open{false};
@@ -23,39 +27,41 @@ private:
         ModifierKeys left;
         ModifierKeys right;
     } modifiers;
+    void openDevice();
+    void closeDevice();
 
 public:
     Keyboard(int event_number = -1);
     ~Keyboard();
-
-    void init();
-    bool openDevice();
-    void closeDevice();
+    bool isEnabled();
+    void setEnabled(bool enabled);
     std::optional<input_event> readEvent();
     void setFlags(input_event &ev);
-    void setHotkey(const SteamHotkeys hotkey_type, const bool meta, const bool alt, const bool ctrl, const bool shift, const unsigned short ev_key);
-    void setDefaultHotkeys();
-    bool testModifiers(const SteamHotkeys hotkey_type);
-    bool isHotkeyPressed(const SteamHotkeys hotkey_type);
-    Hotkey getHotkeys(const SteamHotkeys hotkey_type);
+    void setHotkeys(const HotkeyGroupsEnum hotkey_group, const bool alt, const bool ctrl, const bool shift, const bool meta, const unsigned short ev_key);
+    void setHotkeys(const HotkeyGroupsEnum hotkey_group, const HotkeyGroup &hotkey);
+    bool testModifiers(const HotkeyGroupsEnum hotkey_group);
+    std::optional<HotkeyGroupsEnum> testHotkey();
+    HotkeyGroup getHotkeys(const HotkeyGroupsEnum hotkey_group);
 };
 
-class Keyboards
+class Keyboards : public Parent
 {
 private:
     std::unordered_map<std::string, Keyboard> keyboards;
     DeviceDataReader reader;
-    std::vector<std::string> active_keyboards;
-    const std::string default_keyboard_name = "AT Translated Set 2 keyboard";
+    const std::vector<std::string> excluded_inputs = {"DP-1", "acp5x Headset Jack", "PC Speaker", "Valve Software Steam Deck Controller", "Video Bus", "Power Button", "AT Translated Set 2 keyboard"};
 
 public:
-    Keyboards(/* args */);
-    ~Keyboards();
-    std::vector<std::string> &getKeyboards();
-    std::vector<std::string> &getActiveKeyboards();
-    Keyboard &getKeyboard(const std::string &name);
-    bool process(const SteamHotkeys hotkey_type);
-    bool setKeyboardActive(const std::string &name, bool active = true);
+    Keyboards();
+    void stop();
+    void reloadKeyboards();
+    void saveKeyboard(const std::string &name, Keyboard &keyboard);
+    std::vector<std::string> getKeyboardNames();
+    void process();
+    void setKeyboardEnabled(const std::string &name, bool enabled = true);
+    bool isKeyboardEnabled(const std::string &name);
+    void setKeyboardHotkeys(const std::string &name, const HotkeyGroupsEnum hotkey_group, const bool alt, const bool ctrl, const bool shift, const bool meta, const unsigned short ev_key);
+    HotkeyGroup getKeyboardHotkeys(const std::string &name, const HotkeyGroupsEnum hotkey_group);
 };
 
 #endif

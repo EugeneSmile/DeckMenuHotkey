@@ -2,30 +2,31 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <memory>
 
 #include "Manager.h"
 
-bool run = true;
-Manager manager;
+std::shared_ptr<Manager> manager;
 
 static void signal_handler(int signal)
 {
-   printf("Get signal\n");
-   run = false;
+   printf("[deckmenuhotkey] Got signal\n");
+   if (manager)
+      manager->stop();
 }
 
 int main(void)
 {
    signal(SIGQUIT, signal_handler);
 
+   manager = Manager::create();
+
    int error = 0;
-   while (run)
-   {
-      manager.process();
-   }
+
+   manager->process();
 
    std::this_thread::sleep_for(std::chrono::seconds(1));
-   fprintf(stderr, "Stopping\n");
+   fprintf(stderr, "[deckmenuhotkey] Stopping\n");
 
    return EXIT_SUCCESS;
 }

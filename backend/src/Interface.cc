@@ -4,41 +4,57 @@
 #include <string>
 #include <vector>
 
+#include "Manager.h"
 #include "Homepage.h"
-#include "Keyboards.h"
+#include "StringHelper.h"
 
-Interface::Interface(std::shared_ptr<Keyboards> keyboards) : keyboards(keyboards)
+Interface::Interface()
 {
-    // app.loglevel(crow::LogLevel::WARNING);
+    app.loglevel(crow::LogLevel::WARNING);
+
+    // CORS issue in Crow library https://github.com/CrowCpp/Crow/issues/538
+    /*auto &cors = app.get_middleware<crow::CORSHandler>();
+
+    cors.global()
+        .methods(crow::HTTPMethod::OPTIONS, crow::HTTPMethod::POST, crow::HTTPMethod::GET, crow::HTTPMethod::HEAD)
+        .origin("*")
+        .headers("Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "Access-Control-Allow-Headers");*/
+
     CROW_ROUTE(app, "/")
     ([]
      {
         crow::mustache::context ctx;
         return crow::mustache::compile(HOMEPAGE_HTML).render(); });
 
-    if (keyboards)
+    if (parent->keyboards)
     {
         CROW_ROUTE(app, "/getKeyboards")
         (std::bind(&Interface::getKeyboards, this));
-        CROW_ROUTE(app, "/getActiveKeyboards")
-        (std::bind(&Interface::getActiveKeyboards, this));
-        CROW_ROUTE(app, "/setKeyboardActive")
-        (std::bind(&Interface::setKeyboardActive, this, std::placeholders::_1));
-        CROW_ROUTE(app, "/getKeyboardHotkeys")
-        (std::bind(&Interface::getKeyboardHotkeys, this, std::placeholders::_1));
-        CROW_ROUTE(app, "/setKeyboardHotkey")
-        (std::bind(&Interface::setKeyboardHotkey, this, std::placeholders::_1));
+        CROW_ROUTE(app, "/setKeyboards").methods(crow::HTTPMethod::POST, crow::HTTPMethod::OPTIONS)(std::bind(&Interface::setKeyboards, this, std::placeholders::_1));
+        CROW_ROUTE(app, "/reloadKeyboards")
+        (std::bind(&Interface::reloadKeyboards, this));
         CROW_ROUTE(app, "/logRequest")
         (std::bind(&Interface::logRequest, this, std::placeholders::_1));
+        CROW_ROUTE(app, "/getEnabled")
+        (std::bind(&Interface::getEnabled, this));
+        /*CROW_ROUTE(app, "/setEnabled").methods(crow::HTTPMethod::OPTIONS)([](const crow::request &req)
+                                                                          { CROW_LOG_INFO << "Sending OPTIONS response"; return crow::response(crow::status::OK); });*/
+        CROW_ROUTE(app, "/setEnabled").methods(crow::HTTPMethod::POST, crow::HTTPMethod::OPTIONS)(std::bind(&Interface::setEnabled, this, std::placeholders::_1));
+        CROW_ROUTE(app, "/printConfig")
+        (std::bind(&Interface::printConfig, this));
+        CROW_ROUTE(app, "/stopBackend")
+        (std::bind(&Interface::stopBackend, this));
     }
 
     app_future = app.bindaddr("127.0.0.1")
                      .port(10336)
                      .run_async();
-    CROW_LOG_INFO << "Interface started!";
+
+    app.wait_for_server_start();
+    CROW_LOG_INFO << "[deckmenuhotkey] Interface started!";
 }
 
-Interface::~Interface()
+void Interface::stop()
 {
     app.stop();
     // app_future.wait_for(std::chrono::seconds(1));
@@ -59,46 +75,45 @@ const std::string Interface::fixString(const std::string &str)
 
 crow::json::wvalue Interface::getKeyboards()
 {
-    crow::json::wvalue return_value;
-    return_value = keyboards->getKeyboards();
-    return return_value;
-}
-
-crow::json::wvalue Interface::getActiveKeyboards()
-{
-    crow::json::wvalue return_value;
-    return_value = keyboards->getActiveKeyboards();
-    return return_value;
-}
-
-crow::response Interface::setKeyboardActive(const crow::request &request)
-{
-    crow::response res;
-    res.write(keyboards->setKeyboardActive(fixString(request.url_params.get("keyboard")), crow::utility::lexical_cast<bool>(request.url_params.get("active"))) ? "OK" : "Error");
-    return res;
-}
-
-crow::json::wvalue Interface::getKeyboardHotkeys(const crow::request &request)
-{
-    std::string fixed_name = fixString(request.url_params.get("keyboard"));
-    auto hotkey_steam = keyboards->getKeyboard(fixed_name).getHotkeys(SteamHotkeys::STEAM);
-    auto hotkey_quickmenu = keyboards->getKeyboard(fixed_name).getHotkeys(SteamHotkeys::QUICKMENU);
-    return {
-        {"Steam", {{"Meta", hotkey_steam.modifiers.meta ? "True" : "False"}, {"Alt", hotkey_steam.modifiers.alt ? "True" : "False"}, {"Ctrl", hotkey_steam.modifiers.ctrl ? "True" : "False"}, {"Shift", hotkey_steam.modifiers.shift ? "True" : "False"}, {"Key", std::to_string(hotkey_steam.key)}}},
-        {"Quickmenu",
-         {{"Meta", hotkey_quickmenu.modifiers.meta ? "True" : "False"}, {"Alt", hotkey_quickmenu.modifiers.alt ? "True" : "False"}, {"Ctrl", hotkey_quickmenu.modifiers.ctrl ? "True" : "False"}, {"Shift", hotkey_quickmenu.modifiers.shift ? "True" : "False"}, {"Key", std::to_string(hotkey_quickmenu.key)}}}};
-}
-
-crow::response Interface::setKeyboardHotkey(const crow::request &request)
-{
-    std::string fixed_name = fixString(request.url_params.get("keyboard"));
-    if (!fixed_name.empty())
+    std::vector<crow::json::wvalue> return_value;
+    for (const auto &keyboard : parent->keyboards->getKeyboardNames())
     {
-        keyboards->getKeyboard(fixed_name).setHotkey(static_cast<SteamHotkeys>(crow::utility::lexical_cast<int>("type")), crow::utility::lexical_cast<bool>(request.url_params.get("meta")), crow::utility::lexical_cast<bool>(request.url_params.get("alt")), crow::utility::lexical_cast<bool>(request.url_params.get("ctrl")), crow::utility::lexical_cast<bool>(request.url_params.get("shift")), crow::utility::lexical_cast<unsigned short>(request.url_params.get("key")));
+        crow::json::wvalue keyboard_object;
+        keyboard_object["name"] = keyboard;
+        keyboard_object["enabled"] = (parent->keyboards->isKeyboardEnabled(keyboard));
+        auto hotkey_steam = parent->keyboards->getKeyboardHotkeys(keyboard, HotkeyGroupsEnum::STEAM);
+        auto hotkey_quickmenu = parent->keyboards->getKeyboardHotkeys(keyboard, HotkeyGroupsEnum::QUICKMENU);
+        keyboard_object["hotkeys"] = {
+            {"steam", {{"meta", hotkey_steam.modifiers.meta}, {"alt", hotkey_steam.modifiers.alt}, {"ctrl", hotkey_steam.modifiers.ctrl}, {"shift", hotkey_steam.modifiers.shift}, {"key", hotkey_steam.key}}},
+            {"quickmenu",
+             {{"meta", hotkey_quickmenu.modifiers.meta}, {"alt", hotkey_quickmenu.modifiers.alt}, {"ctrl", hotkey_quickmenu.modifiers.ctrl}, {"shift", hotkey_quickmenu.modifiers.shift}, {"key", hotkey_quickmenu.key}}}};
+        return_value.push_back(keyboard_object);
     }
-    crow::response res;
-    res.write("OK");
-    return res;
+    return return_value;
+}
+
+crow::response Interface::setKeyboards(const crow::request &request)
+{
+    auto req_json = crow::json::load(request.body);
+    if (!req_json)
+        return crow::response(400);
+
+    if (req_json.t() == crow::json::type::List)
+    {
+        for (auto keyboard_json : req_json.lo())
+        {
+            parent->keyboards->setKeyboardEnabled(keyboard_json["name"].s(), keyboard_json["enabled"].b());
+            parent->keyboards->setKeyboardHotkeys(keyboard_json["name"].s(), HotkeyGroupsEnum::STEAM, keyboard_json["hotkeys"]["steam"]["alt"].b(), keyboard_json["hotkeys"]["steam"]["ctrl"].b(), keyboard_json["hotkeys"]["steam"]["shift"].b(), keyboard_json["hotkeys"]["steam"]["meta"].b(), static_cast<unsigned short>(keyboard_json["hotkeys"]["steam"]["key"].u()));
+            parent->keyboards->setKeyboardHotkeys(keyboard_json["name"].s(), HotkeyGroupsEnum::QUICKMENU, keyboard_json["hotkeys"]["quickmenu"]["alt"].b(), keyboard_json["hotkeys"]["quickmenu"]["ctrl"].b(), keyboard_json["hotkeys"]["quickmenu"]["shift"].b(), keyboard_json["hotkeys"]["quickmenu"]["meta"].b(), static_cast<unsigned short>(keyboard_json["hotkeys"]["quickmenu"]["key"].u()));
+        }
+    }
+    return crow::response(200);
+}
+
+crow::response Interface::reloadKeyboards()
+{
+    parent->keyboards->reloadKeyboards();
+    return crow::response(200);
 }
 
 crow::response Interface::logRequest(const crow::request &request)
@@ -117,4 +132,31 @@ crow::response Interface::logRequest(const crow::request &request)
     crow::response res;
     res.write("OK");
     return res;
+}
+
+crow::json::wvalue Interface::getEnabled()
+{
+    return parent->preferences->isAppEnabled();
+}
+
+crow::response Interface::setEnabled(const crow::request &request)
+{
+    parent->preferences->toggleAppEnabled(crow::json::load(request.body).b());
+    if (parent->controller->isCreated() && !crow::json::load(request.body).b())
+        parent->controller->destroy();
+    else if (!parent->controller->isCreated() && crow::json::load(request.body).b())
+        parent->controller->recreate();
+    return crow::response(200);
+}
+
+crow::response Interface::printConfig()
+{
+    parent->preferences->printConfig();
+    return crow::response(200);
+}
+
+crow::response Interface::stopBackend()
+{
+    parent->stop();
+    return crow::response(200);
 }

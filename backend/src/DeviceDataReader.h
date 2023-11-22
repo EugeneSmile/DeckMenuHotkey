@@ -25,8 +25,6 @@ private:
     bool is_mouse{false};
 
 public:
-    DeviceData(/* args */);
-    ~DeviceData();
     void fillData(const std::string &line);
     int getEventNumber();
     const std::string &getName();
@@ -39,13 +37,12 @@ class DeviceDataReader
 private:
     const std::string devices_path = "/proc/bus/input/devices";
     std::unordered_map<std::string, DeviceData> devices;
-    std::vector<std::string> keyboard_names;
+    std::vector<std::string> device_names;
 
 public:
-    DeviceDataReader(/* args */);
-    ~DeviceDataReader();
     int getEventNumber(const std::string &device_name);
-    std::vector<std::string> &getKeyboards();
+    std::vector<std::string> &getDeviceNames();
+    void reloadDevices();
 };
 
 #endif
